@@ -208,7 +208,7 @@ class MarkupMachine(Machine):
     # and c) contain a transition from each state to the target state (including the target)
     def _is_auto_transition(self, event: Any) -> bool:
         if event.name.startswith('to_') and len(event.transitions) == len(self.states):
-            state_name = event.name[len('to_'):]
+            state_name = event.name.removeprefix('to_')
             try:
                 _ = self.get_state(state_name)
                 return True

@@ -2242,3 +2242,106 @@ For bug reports and other issues, please [open an issue](https://github.com/pytr
 For usage questions, post on Stack Overflow, making sure to tag your question with the [`pytransitions` tag](https://stackoverflow.com/questions/tagged/pytransitions). Do not forget to have a look at the [extended examples](./examples)!
 
 For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com) (initial author) and/or [Alexander Neumann](mailto:aleneum@gmail.com) (current maintainer).
+
+---
+
+## Future Roadmap
+
+### Type Safety & Modernization (transitions 2.0)
+
+The transitions library is evolving towards complete type safety while maintaining its dynamic flexibility. Our roadmap for transitions 2.0 focuses on:
+
+#### 1. **100% Internal Type Safety**
+
+We're working towards achieving complete type safety for all internal APIs (excluding dynamic convenience methods attached to models at runtime). This includes:
+
+**Completed** (current version):
+- ✅ Full type annotations on all core modules
+- ✅ Passing `mypy --strict` checks on 17 source files
+- ✅ `__all__` exports declarations in all `__init__.py` files
+- ✅ Type-safe API for all machine, state, and transition operations
+
+**In Progress**:
+- 🔄 Resolving architectural LSP violations (async/sync inheritance)
+- 🔄 Reducing `# type: ignore` comments from ~130 to <20
+- 🔄 Protocols for dynamic attributes where appropriate
+
+**Planned** (transitions 2.0):
+- Generic-based separation of sync/async machine implementations
+- Explicit type definitions for all dynamic state machine features
+- Complete elimination of architectural workarounds
+
+#### 2. **Dataclass Modernization**
+
+We're planning to migrate core classes to Python 3.11+ `@dataclass` for better performance and cleaner code:
+
+**Target Classes**:
+- `State` → `@dataclass(slots=True)`
+- `NestedState` → `@dataclass(slots=True)`
+- `Transition` → `@dataclass(slots=True)`
+- `EventData` variants → `@dataclass`
+
+**Benefits**:
+- **~40% memory reduction** from `slots=True`
+- Auto-generated `__init__`, `__repr__`, `__eq__`
+- Cleaner, more maintainable code
+- Better IDE support and type inference
+
+**Challenges**:
+- Complex initialization logic (e.g., `listify()` for callbacks)
+- Backward compatibility with existing subclassing patterns
+- Careful migration to avoid breaking user code
+
+**Example Migration**:
+```python
+# Current
+class State:
+    def __init__(self, name, on_enter=None, on_exit=None, ...):
+        self._name = name
+        self.on_enter = list(listify(on_enter)) if on_enter else []
+        self.on_exit = list(listify(on_exit)) if on_exit else []
+        ...
+
+# Future (transitions 2.0)
+from dataclasses import dataclass, field
+from typing import Self
+
+@dataclass(slots=True)
+class State:
+    _name: StateName
+    on_enter: CallbackList = field(default_factory=list)
+    on_exit: CallbackList = field(default_factory=list)
+    ignore_invalid_triggers: Optional[bool] = None
+    final: bool = False
+
+    def __post_init__(self):
+        # Handle complex initialization logic
+        if not isinstance(self.on_enter, list):
+            self.on_enter = list(listify(self.on_enter))
+        ...
+```
+
+#### 3. **Timeline & Milestones**
+
+- **transitions 0.x** (current): Type annotations + modern Python features
+  - ✅ f-strings for logging
+  - ✅ `str.removeprefix()` for cleaner string handling
+  - ✅ Complete type annotation coverage
+
+- **transitions 1.0** (future): Breaking changes for full type safety
+  - ⏳ Dataclass migration for core classes
+  - ⏳ Generic-based async/sync separation
+  - ⏳ 100% internal type safety
+  - ⏳ Python 3.11+ minimum version
+  - ⏳ Extended callback type safety with Protocols
+
+#### 4. **Contributing**
+
+Interested in helping us achieve 100% type safety? We'd love contributions! Areas where help would be especially valuable:
+
+1. **Testing**: Ensure type annotations match runtime behavior
+2. **Documentation**: Help document type-safe usage patterns
+3. **Feedback**: Share your use cases to help us design the type system
+4. **Patience**: We're balancing type safety with the dynamic flexibility that makes transitions powerful
+
+For detailed discussions on type system architecture, see [`MODERNIZATION_PLAN.md`](MODERNIZATION_PLAN.md) in the repository.

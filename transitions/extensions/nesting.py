@@ -1164,7 +1164,7 @@ class HierarchicalMachine(Machine):
         self.add_states(new_states)
         for evt in state.events.values():
             # skip auto transitions
-            if state.auto_transitions and evt.name.startswith('to_') and evt.name[3:] in state.states:
+            if state.auto_transitions and evt.name.startswith('to_') and evt.name.removeprefix('to_') in state.states:
                 continue
             if evt.transitions and evt.name not in self.events:
                 self.events[evt.name] = evt
@@ -1207,7 +1207,7 @@ class HierarchicalMachine(Machine):
         self._add_may_transition_func_for_trigger(trigger, model)
         # FunctionWrappers are only necessary if a custom separator is used
         if trigger.startswith('to_') and self.state_cls.separator != '_':
-            path = trigger[3:].split(self.state_cls.separator)
+            path = trigger.removeprefix('to_').split(self.state_cls.separator)
             if hasattr(model, 'to_' + path[0]):
                 # add path to existing function wrapper
                 getattr(model, 'to_' + path[0]).add(trig_func, path[1:])

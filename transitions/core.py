@@ -131,15 +131,15 @@ class State:
 
     def enter(self, event_data: 'EventData') -> None:
         """Triggered when a state is entered."""
-        _LOGGER.debug("%sEntering state %s. Processing callbacks...", event_data.machine.name, self.name)
+        _LOGGER.debug(f"{event_data.machine.name}Entering state {self.name}. Processing callbacks...")
         event_data.machine.callbacks(self.on_enter, event_data)
-        _LOGGER.info("%sFinished processing state %s enter callbacks.", event_data.machine.name, self.name)
+        _LOGGER.info(f"{event_data.machine.name}Finished processing state {self.name} enter callbacks.")
 
     def exit(self, event_data: 'EventData') -> None:
         """Triggered when a state is exited."""
-        _LOGGER.debug("%sExiting state %s. Processing callbacks...", event_data.machine.name, self.name)
+        _LOGGER.debug(f"{event_data.machine.name}Exiting state {self.name}. Processing callbacks...")
         event_data.machine.callbacks(self.on_exit, event_data)
-        _LOGGER.info("%sFinished processing state %s exit callbacks.", event_data.machine.name, self.name)
+        _LOGGER.info(f"{event_data.machine.name}Finished processing state {self.name} exit callbacks.")
 
     def add_callback(self, trigger: str, func: Union[str, Callback]) -> None:
         """Add a new enter or exit callback.
@@ -267,8 +267,7 @@ class Transition:
     def _eval_conditions(self, event_data: 'EventData') -> bool:
         for cond in self.conditions:
             if not cond.check(event_data):
-                _LOGGER.debug("%sTransition condition failed: %s() does not return %s. Transition halted.",
-                              event_data.machine.name, cond.func, cond.target)
+                _LOGGER.debug(f"{event_data.machine.name}Transition condition failed: {cond.func}() does not return {cond.target}. Transition halted.")
                 return False
         return True
 
@@ -279,11 +278,10 @@ class Transition:
         Returns: boolean indicating whether the transition was
             successfully executed (True if successful, False if not).
         """
-        _LOGGER.debug("%sInitiating transition from state %s to state %s...",
-                      event_data.machine.name, self.source, self.dest)
+        _LOGGER.debug(f"{event_data.machine.name}Initiating transition from state {self.source} to state {self.dest}...")
 
         event_data.machine.callbacks(self.prepare, event_data)
-        _LOGGER.debug("%sExecuted callbacks before conditions.", event_data.machine.name)
+        _LOGGER.debug(f"{event_data.machine.name}Executed callbacks before conditions.")
 
         if not self._eval_conditions(event_data):
             return False
@@ -291,14 +289,14 @@ class Transition:
         # Combine callbacks and convert to list for type safety
         before_callbacks = list(itertools.chain(event_data.machine.before_state_change, self.before))
         event_data.machine.callbacks(before_callbacks, event_data)
-        _LOGGER.debug("%sExecuted callback before transition.", event_data.machine.name)
+        _LOGGER.debug(f"{event_data.machine.name}Executed callback before transition.")
 
         if self.dest is not None:  # if self.dest is None this is an internal transition with no actual state change
             self._change_state(event_data)
 
         after_callbacks = list(itertools.chain(self.after, event_data.machine.after_state_change))
         event_data.machine.callbacks(after_callbacks, event_data)
-        _LOGGER.debug("%sExecuted callback after transition.", event_data.machine.name)
+        _LOGGER.debug(f"{event_data.machine.name}Executed callback after transition.")
         return True
 
     def _change_state(self, event_data: 'EventData') -> None:
@@ -466,17 +464,14 @@ class Event:
         finally:
             try:
                 self.machine.callbacks(self.machine.finalize_event, event_data)
-                _LOGGER.debug("%sExecuted machine finalize callbacks", self.machine.name)
+                _LOGGER.debug(f"{self.machine.name}Executed machine finalize callbacks")
             except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
-                _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.",
-                              self.machine.name,
-                              type(err).__name__,
-                              str(err))
+                _LOGGER.error(f"{self.machine.name}While executing finalize callbacks a {type(err).__name__} occurred: {str(err)}")
         return event_data.result
 
     def _process(self, event_data: 'EventData') -> None:
         self.machine.callbacks(self.machine.prepare_event, event_data)
-        _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", self.machine.name)
+        _LOGGER.debug(f"{self.machine.name}Executed machine preparation callbacks before conditions.")
         # event_data.state should always be set when _process is called
         # (set in _trigger before calling _process)
         assert event_data.state is not None
@@ -973,7 +968,7 @@ class Machine:
         if (bound_func is None) ^ self.model_override:
             setattr(model, name, func)
         else:
-            _LOGGER.warning("%sSkip binding of '%s' to model due to model override policy.", self.name, name)
+            _LOGGER.warning(f"{self.name}Skip binding of '{name}' to model due to model override policy.")
 
     def _can_trigger(self, model: Any, trigger: str, *args: Any, **kwargs: Any) -> bool:
         state = self.get_model_state(model)
@@ -1292,7 +1287,7 @@ class Machine:
         """Triggers a list of callbacks"""
         for func in funcs:
             self.callback(func, event_data)
-            _LOGGER.info("%sExecuted callback '%s'", self.name, func)
+            _LOGGER.info(f"{self.name}Executed callback '{func}'")
 
     def callback(self, func: Union[str, Callback], event_data: 'EventData') -> None:
         """Trigger a callback function with passed event_data parameters. In case func is a string,
