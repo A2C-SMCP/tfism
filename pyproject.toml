@@ -176,10 +176,27 @@ nox-test = "uv run nox -s test"
 nox-test-no-diagrams = "uv run nox -s test_no_diagrams"
 
 # Version management
-version-bump = "uv run bump-my-version bump $PART"
+# Show current version and possible bumps
+version-show = "uv run bump-my-version show"
+version-show-bump = "uv run bump-my-version show-bump"
+
+# Bump version parts (for official releases)
+version-bump-major = "uv run bump-my-version bump major"
 version-bump-minor = "uv run bump-my-version bump minor"
 version-bump-patch = "uv run bump-my-version bump patch"
-version-show = "uv run bump-my-version show"
+
+# Pre-release version management
+version-bump-dev = "uv run bump-my-version bump dev --no-commit --no-tag"
+version-bump-rc = "uv run bump-my-version bump rc --no-commit --no-tag"
+version-bump-rc-final = "uv run bump-my-version bump final"  # Remove pre-release tag
+
+# Release workflow (bump + commit + tag in one step)
+version-release-patch = "uv run bump-my-version bump patch"
+version-release-minor = "uv run bump-my-version bump minor"
+version-release-major = "uv run bump-my-version bump major"
+
+# Helpers
+version-dry-run = "uv run bump-my-version bump patch --dry-run -v"
 version-tag = "uv run bump-my-version tag"
 
 # Build and publish

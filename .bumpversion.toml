@@ -49,5 +49,5 @@ replace = "version-v{new_version}"
 
 [[tool.bumpversion.files]]
 filename = "README.md"
-search = "compare/0.9.4...main"
-replace = "compare/{current_version}...main"
+search = "compare/{current_version}...main"
+replace = "compare/{new_version}...main"
