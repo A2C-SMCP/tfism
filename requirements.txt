@@ -2,4 +2,5 @@
 # Note: This file is kept for backward compatibility.
 # For uv package management, see pyproject.toml
 
-# No runtime dependencies (six removed in 1.0)
+# Temporary: six still used in code, will be removed in Stage 2
+six

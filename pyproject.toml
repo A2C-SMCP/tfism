@@ -25,7 +25,10 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 
-dependencies = []
+dependencies = [
+    # Temporary: six still used in code, will be removed in Stage 2
+    "six",
+]
 
 [project.optional-dependencies]
 diagrams = [
@@ -72,8 +75,8 @@ packages = ["transitions"]
 "transitions/py.typed" = "transitions/py.typed"
 "transitions/data" = "transitions/data"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=7.0",
     "pytest-cov",
     "pytest-runner",
