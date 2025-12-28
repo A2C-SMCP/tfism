@@ -85,6 +85,8 @@ class State:
         ignore_invalid_triggers (bool): Indicates if unhandled/invalid triggers should raise an exception.
     """
 
+    __slots__ = ['_name', 'final', 'ignore_invalid_triggers', 'on_enter', 'on_exit']
+
     # A list of dynamic methods which can be resolved by a ``Machine`` instance for convenience functions.
     # Dynamic methods for states must always start with `on_`!
     dynamic_methods: List[str] = ['on_enter', 'on_exit']
@@ -165,6 +167,8 @@ class Condition:
                 and when False, the callback should return False to pass.
     """
 
+    __slots__ = ['func', 'target']
+
     def __init__(self, func: Union[str, Callback], target: bool = True):
         """
         Args:
@@ -215,6 +219,8 @@ class Transition:
         after (list): Callbacks executed after the transition is executed
             but only if condition checks have been successful.
     """
+
+    __slots__ = ['source', 'dest', 'prepare', 'before', 'after', 'conditions']
 
     dynamic_methods = ['before', 'after', 'prepare']
     """ A list of dynamic methods which can be resolved by a ``Machine`` instance for convenience functions. """
@@ -343,6 +349,8 @@ class EventData:
         result (bool): True in case a transition has been successful, False otherwise.
     """
 
+    __slots__ = ['state', 'event', 'machine', 'model', 'args', 'kwargs', 'transition', 'error', 'result']
+
     def __init__(
         self,
         state: Optional[State],
@@ -392,6 +400,8 @@ class Event:
     """A collection of transitions assigned to the same trigger
 
     """
+
+    __slots__ = ['name', 'machine', 'transitions']
 
     def __init__(self, name: str, machine: 'Machine') -> None:
         """

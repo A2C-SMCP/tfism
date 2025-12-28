@@ -150,6 +150,9 @@ class NestedEvent(Event):
 class NestedEventData(EventData):
     """Collection of relevant data related to the ongoing nested transition attempt."""
 
+    __slots__ = ['state', 'event', 'machine', 'model', 'args', 'kwargs', 'transition', 'error', 'result',
+                 'source_path', 'source_name', 'scope']
+
     def __init__(
         self,
         state: Optional['NestedState'],
@@ -173,6 +176,9 @@ class NestedState(State):
         initial (list, str, NestedState or Enum): (Name of a) child or list of children that should be entered when the
         state is entered.
     """
+
+    __slots__ = ['_name', 'final', 'ignore_invalid_triggers', 'on_enter', 'on_exit',
+                 'initial', 'events', 'states', 'on_final', '_scope']
 
     separator = '_'
     u""" Separator between the names of parent and child states. In case '_' is required for
@@ -246,6 +252,8 @@ class NestedState(State):
 
 class NestedTransition(Transition):
     """A transition which handles entering and leaving nested states."""
+
+    __slots__ = ['source', 'dest', 'prepare', 'before', 'after', 'conditions']
 
     def _resolve_transition(
         self,
@@ -409,11 +417,14 @@ class NestedTransition(Transition):
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
-        for key, value in self.__dict__.items():
-            if key in cls.dynamic_methods or key == "conditions":
-                setattr(result, key, copy.copy(value))
-            else:
-                setattr(result, key, copy.deepcopy(value, memo))
+        # Iterate over __slots__ instead of __dict__ since NestedTransition uses __slots__
+        for slot in cls.__slots__:
+            if hasattr(self, slot):
+                value = getattr(self, slot)
+                if slot in cls.dynamic_methods or slot == "conditions":
+                    setattr(result, slot, copy.copy(value))
+                else:
+                    setattr(result, slot, copy.deepcopy(value, memo))
         return result
 
 
