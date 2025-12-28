@@ -40,6 +40,11 @@ jobs:
         if: contains(matrix.extras, 'diagrams')
         run: |
           sudo apt-get install libgraphviz-dev graphviz
+      - name: Run type checking
+        if: contains(matrix.extras, 'mypy')
+        run: |
+          uv run mypy --config-file mypy.ini --strict transitions
+          uv run pytest tests/test_codestyle.py
       - name: Test with pytest
         run: |
           uv run pytest --doctest-modules tests/

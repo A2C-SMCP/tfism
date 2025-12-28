@@ -1,6 +1,0 @@
-# Diagram generation dependencies
-# Note: This file is kept for backward compatibility.
-# For uv package management, use: uv pip install -e ".[diagrams]"
-
-pygraphviz
-graphviz

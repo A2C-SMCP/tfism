@@ -58,6 +58,10 @@ mypy = [
     "mypy",
     "types-mock",
 ]
+# All optional dependencies for development
+all = [
+    "transitions[diagrams,dev,test,mypy]",
+]
 
 [project.urls]
 Homepage = "http://github.com/pytransitions/transitions"
@@ -74,6 +78,29 @@ packages = ["transitions"]
 "transitions/py.typed" = "transitions/py.typed"
 "transitions/data" = "transitions/data"
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.venv",
+    "/venv",
+    "/env",
+    "/.nox",
+    "/__pycache__",
+    "/build",
+    "/dist",
+    "/*.pyc",
+    "/*.pyo",
+    "/*.pyd",
+    "/*.so",
+]
+
+[tool.hatch.build]
+include = [
+    "transitions/**/*.py",
+    "transitions/**/*.pyi",
+    "transitions/py.typed",
+    "transitions/data/**",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=7.0",
@@ -85,6 +112,8 @@ dev = [
     "pycodestyle",
     "mypy",
     "types-mock",
+    "nox",
+    "poethepoet",
 ]
 
 [tool.mypy]
@@ -117,6 +146,41 @@ warn_unused_ignores = false
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --tb=short"
+
+[tool.poe.tasks]
+# Environment setup
+install-dev = "uv pip install -e '.[all]'"
+install-all = "uv pip install -e '.[all]'"
+
+# Test tasks
+test = "uv run pytest tests/"
+test-cov = "uv run pytest --cov=transitions --cov-report=html --cov-report=term tests/"
+test-no-diagrams = "uv run pytest tests/ --ignore=tests/test_codestyle.py"
+
+# Type checking
+mypy = "uv run mypy --config-file mypy.ini --strict transitions"
+codestyle = "uv run pytest tests/test_codestyle.py"
+typecheck = ["mypy", "codestyle"]
+
+# Code quality
+lint = "uv run pycodestyle transitions/"
+format-check = "uv run pycodestyle transitions/"
+
+# Nox sessions
+nox = "uv run nox"
+nox-mypy = "uv run nox -s mypy"
+nox-test = "uv run nox -s test"
+nox-test-no-diagrams = "uv run nox -s test_no_diagrams"
+
+# Build and publish
+build = "uv build"
+publish = "uv publish"
+
+# Documentation
+serve-docs = "uv run mkdocs serve"
+
+# Help
+help = "uv run poe --help"
 
 [tool.coverage.run]
 source = ["transitions"]

@@ -1,5 +1,4 @@
 include *.md
-include *.txt
 include .coveragerc
 include .pylintrc
 include LICENSE
@@ -7,9 +6,21 @@ include MANIFEST
 include *.ini
 include conftest.py
 include noxfile.py
+include mypy.ini
 
 recursive-include transitions *.pyi
 recursive-include examples *.ipynb
 recursive-include tests *.py
 recursive-exclude examples/.ipynb_checkpoints *.ipynb
 recursive-include binder *.txt postBuild
+
+# Exclude virtual environments and build artifacts
+prune .venv
+prune venv
+prune env
+prune .nox
+prune __pycache__
+prune build
+prune dist
+global-exclude *.py[cod]
+global-exclude *.so
