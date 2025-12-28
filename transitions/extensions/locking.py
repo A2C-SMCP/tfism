@@ -21,8 +21,10 @@ _LOGGER.addHandler(logging.NullHandler())
 
 
 try:
-    from contextlib import nested  # Python 2  # type: ignore[attr-defined]
-    from thread import get_ident  # pragma: no cover  # type: ignore[import]
+    # TODO: Remove Python 2 legacy code - contextlib.nested doesn't exist in Python 3.3+
+    from contextlib import nested  # type: ignore[attr-defined]
+    # TODO: Remove Python 2 legacy code - thread module was renamed to threading in Python 3
+    from thread import get_ident  # type: ignore[import-not-found]
     # with nested statements now raise a DeprecationWarning. Should be replaced with ExitStack-like approaches.
     warnings.simplefilter('ignore', DeprecationWarning)  # pragma: no cover
 

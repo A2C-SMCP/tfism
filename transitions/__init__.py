@@ -7,6 +7,16 @@ A lightweight, object-oriented state machine implementation in Python. Requires 
 from .version import __version__
 from .core import (State, Transition, Event, EventData, Machine, MachineError)
 
+__all__ = [
+    '__version__',
+    'State',
+    'Transition',
+    'Event',
+    'EventData',
+    'Machine',
+    'MachineError',
+]
+
 __copyright__ = "Copyright (c) 2024 Tal Yarkoni, Alexander Neumann"
 __license__ = "MIT"
 __summary__ = "A lightweight, object-oriented finite state machine implementation in Python with many extensions"

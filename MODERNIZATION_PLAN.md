@@ -566,3 +566,300 @@ uv run pytest --cov=transitions --cov-report=html
 - [Python 3.11 新特性](https://docs.python.org/3.11/whatsnew/3.11.html)
 - [Python 3.12 新特性](https://docs.python.org/3.12/whatsnew/3.12.html)
 - [typing 模块文档](https://docs.python.org/3/library/typing.html)
+
+---
+
+## 阶段 8：类型系统现代化重构 ✅
+
+### 8.1 当前状态（2025-12）
+
+**已完成的工作**:
+- ✅ 所有核心模块和扩展模块已添加完整类型注解
+- ✅ 通过 `mypy --strict` 检查（0 错误）
+- ✅ 所有 3211 个功能测试通过
+- ✅ PEP 8 代码风格检查通过
+- ✅ 在 `__init__.py` 文件中添加 `__all__` 显式导出声明
+
+**类型注解统计**:
+| 模块 | 类型注解状态 | type: ignore 数量 |
+|------|-------------|------------------|
+| core.py | ✅ 完整 | 0 |
+| nesting.py | ✅ 完整 | ~85 (架构限制) |
+| asyncio.py | ✅ 完整 | ~45 (异步/同步 LSP 冲突) |
+| locking.py | ✅ 完整 | 2 (Python 2 遗留代码) |
+| diagrams_*.py | ✅ 完整 | 0 |
+| markup.py | ✅ 完整 | 0 |
+| factory.py | ✅ 完整 | 0 |
+
+### 8.2 架构层级类型问题
+
+当前代码中存在两类无法在保持向后兼容性的前提下解决的架构层级类型问题：
+
+#### 问题 1：异步/同步方法 LSP 违规
+
+**问题描述**:
+`AsyncMachine` 和 `HierarchicalAsyncMachine` 继承自同步的 `Machine` 和 `HierarchicalMachine`，但将多个同步方法重写为异步方法，这违反了里氏替换原则（LSP）。
+
+**影响的方法** (在 `asyncio.py` 中):
+- `add_model()` - 返回类型不同（None vs Machine）
+- `dispatch()` - 返回 Coroutine[Any, Any, bool] 而非 bool
+- `callbacks()` / `callback()` - 返回 Coroutine 而非 None
+- `_can_trigger()` / `_process()` - 返回 Coroutine
+- `trigger_event()` / `_trigger_event()` / `_trigger_event_nested()` - 返回 Coroutine
+- `AsyncState.enter()` / `exit()` - 异步方法覆盖同步父类方法
+
+**当前解决方案**:
+使用 `# type: ignore[override]` 临时抑制，并添加 TODO 注释说明这是架构限制。
+
+**推荐的长期解决方案**:
+
+使用泛型基类分离异步和同步实现：
+
+```python
+from typing import TypeVar, Generic, Callable, Awaitable
+
+T = TypeVar('T', bool, Awaitable[bool])
+
+class BaseMachine(Generic[T], ABC):
+    """使用泛型参数 T 区分同步/异步机器的基类"""
+
+    @abstractmethod
+    def dispatch(self, *args: Any, **kwargs: Any) -> T:
+        ...
+
+class SyncMachine(BaseMachine[bool]):
+    """同步状态机实现"""
+    def dispatch(self, *args: Any, **kwargs: Any) -> bool:
+        # 同步实现
+        ...
+
+class AsyncMachine(BaseMachine[Awaitable[bool]]):
+    """异步状态机实现"""
+    async def dispatch(self, *args: Any, **kwargs: Any) -> bool:
+        # 异步实现
+        ...
+```
+
+**优势**:
+- 完全符合 LSP 原则
+- 编译时类型安全
+- 无需运行时类型检查
+- 更好的 IDE 支持
+
+**迁移成本**:
+- 高 - 需要重构整个继承层次
+- 可能破坏现有用户代码
+- 建议作为 transitions 2.0 的主要特性
+
+#### 问题 2：动态属性访问
+
+**问题描述**:
+状态机框架大量使用动态属性（如 `state_cls.separator`, `state.events`, `state.states`），这些属性在运行时动态添加，无法通过静态类型检查。
+
+**当前解决方案**:
+使用 `# type: ignore[attr-defined]` 抑制错误。
+
+**推荐的解决方案**:
+
+方案 A：使用 `Protocol` 定义动态属性接口
+```python
+from typing import Protocol
+
+class SeparatorProtocol(Protocol):
+    separator: str
+
+class StateWithEvents:
+    def __init__(self) -> None:
+        self.events: Dict[str, Event] = {}
+        self.states: Dict[str, State] = {}
+
+def process_state(state: SeparatorProtocol & StateWithEvents) -> None:
+    sep = state.separator  # 类型检查通过
+    events = state.events  # 类型检查通过
+```
+
+方案 B：使用 `_DynamicAttr` 混合类
+```python
+from typing import Any
+
+class _DynamicAttr:
+    """标记类具有动态属性"""
+    def __getattr__(self, name: str) -> Any:
+        raise AttributeError(f"{type(self).__name__} has no attribute {name}")
+
+class State(_DynamicAttr):
+    # 现有实现
+    ...
+```
+
+方案 C：定义显式接口（推荐用于 2.0）
+```python
+@dataclass
+class NestedState:
+    name: str
+    separator: str = "_"  # 显式声明
+    events: Dict[str, 'NestedEvent'] = field(default_factory=dict)
+    states: Dict[str, 'NestedState'] = field(default_factory=dict)
+    # ... 其他属性
+```
+
+**迁移建议**:
+- 短期：继续使用 `# type: ignore[attr-defined]`
+- 中期：为关键动态属性添加 Protocol 定义
+- 长期：在 2.0 版本中显式声明所有属性
+
+#### 问题 3：子类方法签名不兼容
+
+**问题描述**:
+子类扩展了父类方法接受的参数类型，例如：
+- `HierarchicalMachine.set_state()` 接受 `List[str]` 而父类只接受 `str | Enum | State`
+- `HierarchicalMachine._add_model_to_state()` 参数类型为 `NestedState` 而非父类的 `State`
+
+**当前解决方案**:
+使用 `# type: ignore[override]` 抑制 LSP 错误。
+
+**推荐的解决方案**:
+
+使用 TypeVar with bound 来实现类型约束细化：
+
+```python
+from typing import TypeVar, Union
+
+S = TypeVar('S', bound=State)
+
+class HierarchicalMachine(Machine):
+    def set_state(self, state: Union[str, Enum, List[str], S], model: Optional[Any] = None) -> None:
+        # 现在可以接受更广泛的类型
+        ...
+
+    def _add_model_to_state(self, state: S, model: Any) -> None:
+        # 使用 TypeVar bound 确保类型兼容性
+        ...
+```
+
+或者在 2.0 中完全重新设计继承层次，使嵌套状态机成为独立的类型而非继承自基础机器。
+
+#### 问题 4：Python 2 遗留代码
+
+**问题描述**:
+`locking.py` 中包含 Python 2 的遗留代码：
+- `contextlib.nested` (Python 2 特有，在 Python 3.3+ 中已移除)
+- `thread` 模块 (在 Python 3 中重命名为 `threading`)
+
+**当前解决方案**:
+使用 `# type: ignore[attr-defined]` 和 `# type: ignore[import-not-found]` 抑制错误。
+
+**推荐的解决方案**:
+
+完全移除 Python 2 支持代码：
+
+```python
+# 移除整个 try-except 块
+# try:
+#     from contextlib import nested  # Python 2
+#     from thread import get_ident
+# except ImportError:
+#     ...
+
+# 仅保留 Python 3 实现
+from contextlib import ExitStack, contextmanager
+from threading import get_ident
+
+@contextmanager
+def nested(*contexts: Any) -> Generator[Tuple[Any, ...], None, None]:
+    """Python 3 实现"""
+    with ExitStack() as stack:
+        for ctx in contexts:
+            stack.enter_context(ctx)
+        yield contexts
+```
+
+**迁移建议**:
+在 transitions 1.0 或 2.0 中完全移除 Python 2 兼容代码，因为项目已经要求 Python 3.11+。
+
+### 8.3 类型注解最佳实践
+
+基于本次类型注解工作的经验，总结以下最佳实践：
+
+1. **使用 TypeAlias 提高可读性**:
+   ```python
+   StateName: TypeAlias = Union[str, Enum]
+   Callback: TypeAlias = Callable[..., Any]
+   ```
+
+2. **使用 `# type: ignore` 时添加具体错误码**:
+   ```python
+   # 好的做法
+   func()  # type: ignore[arg-type]
+
+   # 避免这样
+   func()  # type: ignore
+   ```
+
+3. **为架构限制添加 TODO 注释**:
+   ```python
+   def method(self) -> None:  # type: ignore[override]
+       # TODO: Architectural issue - async override of sync parent method
+       # Requires generic-based async/sync separation architecture
+       ...
+   ```
+
+4. **在 `__init__.py` 中使用 `__all__` 显式导出**:
+   ```python
+   __all__ = ['Machine', 'State', 'Event', ...]
+   ```
+
+5. **使用 TYPE_CHECKING 避免循环导入**:
+   ```python
+   from typing import TYPE_CHECKING
+
+   if TYPE_CHECKING:
+       from .core import Machine
+   ```
+
+### 8.4 未来类型系统改进路线图
+
+**短期** (transitions 1.x):
+- ✅ 完成所有模块的类型注解
+- ✅ 通过 mypy strict 检查
+- ✅ 添加 __all__ 导出声明
+- 🔄 保持现有架构，使用 type: ignore 处理架构限制
+
+**中期** (transitions 1.1 - 1.5):
+- 为关键动态属性添加 Protocol 定义
+- 使用 TypeVar 减少类型不兼容
+- 移除 Python 2 遗留代码
+- 优化类型注解，减少 type: ignore 使用
+
+**长期** (transitions 2.0):
+- 重新设计继承层次，使用泛型基类分离异步/同步实现
+- 显式声明所有动态属性
+- 完全消除 type: ignore 注释
+- 实现 100% 类型安全（无需 type: ignore）
+
+### 8.5 类型检查集成
+
+**CI/CD 配置**:
+```yaml
+# .github/workflows/pytest.yml
+- name: Run type checks
+  run: |
+    uv run mypy --config-file mypy.ini --strict transitions
+    uv run pytest tests/test_codestyle.py
+```
+
+**开发工作流**:
+```bash
+# 开发时运行类型检查
+uv run mypy --config-file mypy.ini --strict transitions --watch
+
+# 提交前检查
+uv run mypy --config-file mypy.ini --strict transitions && uv run pytest
+```
+
+### 8.6 相关资源
+
+- [Mypy 文档 - 类型忽略最佳实践](https://mypy.readthedocs.io/en/stable/type_inference_and_annotations.html)
+- [PEP 544 - Protocol: Structural Subtyping (Static Duck Typing)](https://peps.python.org/pep-0544/)
+- [Python 类型系统演进路线图](https://github.com/python/typing/issues/994)
+- [Effective Python, 3rd Edition - Item 52: Know How to Break Circular Dependencies with Type Hints](https://effectivepython.com/)

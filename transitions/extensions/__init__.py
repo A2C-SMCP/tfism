@@ -20,3 +20,18 @@ try:
     from .factory import AsyncGraphMachine, HierarchicalAsyncGraphMachine
 except (ImportError, SyntaxError):  # pragma: no cover
     pass
+
+__all__ = [
+    'GraphMachine',
+    'HierarchicalGraphMachine',
+    'HierarchicalMachine',
+    'LockedMachine',
+    'MachineFactory',
+    'LockedHierarchicalGraphMachine',
+    'LockedHierarchicalMachine',
+    'LockedGraphMachine',
+    'AsyncMachine',
+    'HierarchicalAsyncMachine',
+    'AsyncGraphMachine',
+    'HierarchicalAsyncGraphMachine',
+]

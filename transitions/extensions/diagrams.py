@@ -17,7 +17,7 @@ import warnings
 from functools import partial
 from typing import Any, Callable, Optional, Union
 
-from transitions import Transition  # type: ignore[attr-defined]
+from transitions import Transition
 
 from ..core import EventData, listify
 from .markup import MarkupMachine, HierarchicalMarkupMachine
