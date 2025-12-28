@@ -32,14 +32,15 @@ jobs:
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Install system dependencies for diagrams
+        if: contains(matrix.extras, 'diagrams')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgraphviz-dev graphviz
       - name: Install dependencies
         run: |
           uv venv --python ${{ matrix.python-version }}
           uv pip install -e ".${{ matrix.extras }}"
-      - name: Install dependencies for diagrams
-        if: contains(matrix.extras, 'diagrams')
-        run: |
-          sudo apt-get install libgraphviz-dev graphviz
       - name: Run type checking
         if: contains(matrix.extras, 'mypy')
         run: |
