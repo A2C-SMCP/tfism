@@ -246,5 +246,5 @@ def add_state_features(*args: type) -> Callable[[Any], Any]:
     return _class_decorator
 
 
-class VolatileObject(object):
+class VolatileObject:
     """Empty Python object which can be used to assign attributes to."""

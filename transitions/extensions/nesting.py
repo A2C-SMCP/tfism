@@ -62,7 +62,7 @@ def resolve_order(state_tree: Dict[str, Any]) -> Any:  # reversed[List[List[str]
     return list(reversed(res))
 
 
-class FunctionWrapper(object):
+class FunctionWrapper:
     """A wrapper to enable transitions' convenience function to_<state> for nested states.
         This allows to call model.to_A.s1.C() in case a custom separator has been chosen."""
     def __init__(self, func: Callback) -> None:

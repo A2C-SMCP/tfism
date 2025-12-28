@@ -8,11 +8,12 @@
 
 from collections import defaultdict
 from functools import partial
-from threading import Lock
+from threading import Lock, get_ident
 import inspect
 import warnings
 import logging
 from typing import Any, Generator, List, Tuple, Type, Optional, Union
+from contextlib import ExitStack, contextmanager
 
 from transitions.core import Machine, Event, listify
 
@@ -20,25 +21,17 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
 
 
-try:
-    # TODO: Remove Python 2 legacy code - contextlib.nested doesn't exist in Python 3.3+
-    from contextlib import nested  # type: ignore[attr-defined]
-    # TODO: Remove Python 2 legacy code - thread module was renamed to threading in Python 3
-    from thread import get_ident  # type: ignore[import-not-found]
-    # with nested statements now raise a DeprecationWarning. Should be replaced with ExitStack-like approaches.
-    warnings.simplefilter('ignore', DeprecationWarning)  # pragma: no cover
+@contextmanager
+def nested(*contexts: Any) -> Generator[Tuple[Any, ...], None, None]:
+    """Reimplementation of contextlib.nested for Python 3.
 
-except ImportError:
-    from contextlib import ExitStack, contextmanager
-    from threading import get_ident
-
-    @contextmanager
-    def nested(*contexts: Any) -> Generator[Tuple[Any, ...], None, None]:
-        """Reimplementation of nested in Python 3."""
-        with ExitStack() as stack:
-            for ctx in contexts:
-                stack.enter_context(ctx)
-            yield contexts
+    This function was deprecated in Python 3.3 and removed in later versions.
+    The contextlib.nested function from Python 2 has been reimplemented using ExitStack.
+    """
+    with ExitStack() as stack:
+        for ctx in contexts:
+            stack.enter_context(ctx)
+        yield contexts
 
 
 class PicklableLock:
