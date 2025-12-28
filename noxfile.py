@@ -8,6 +8,7 @@ Usage:
 """
 
 import nox
+import sys
 
 # Python versions to test against (project requires 3.11+)
 PYTHON_VERSIONS = ["3.11", "3.12", "3.13"]
@@ -45,7 +46,7 @@ def test(session: nox.Session) -> None:
     session.run("uv", "pip", "install", "-e", ".[test,diagrams]")
 
     # Install graphviz system dependency (Linux only)
-    if session.posix and session.python == "3.13":
+    if sys.platform.startswith('linux') and session.python == "3.13":
         session.run("sudo", "apt-get", "update", silent=True, external=True)
         session.run("sudo", "apt-get", "install", "-y", "graphviz", "libgraphviz-dev",
                    silent=True, external=True)
