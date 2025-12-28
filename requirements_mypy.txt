@@ -1,3 +1,6 @@
+# Type checking dependencies
+# Note: This file is kept for backward compatibility.
+# For uv package management, use: uv pip install -e ".[mypy]"
+
 mypy
-graphviz
-types-six
+types-mock

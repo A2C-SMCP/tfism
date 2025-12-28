@@ -1,1 +1,5 @@
-six
+# Runtime dependencies for transitions
+# Note: This file is kept for backward compatibility.
+# For uv package management, see pyproject.toml
+
+# No runtime dependencies (six removed in 1.0)

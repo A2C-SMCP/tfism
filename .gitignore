@@ -21,3 +21,6 @@ sandbox*
 coverage.xml
 .dmypy.json
 .venv
+# uv cache
+.uv/
+uv.lock

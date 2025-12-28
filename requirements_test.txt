@@ -1,4 +1,8 @@
-pytest
+# Test dependencies
+# Note: This file is kept for backward compatibility.
+# For uv package management, use: uv pip install -e ".[test]"
+
+pytest>=7.0
 pytest-cov
 pytest-runner
 pytest-xdist
