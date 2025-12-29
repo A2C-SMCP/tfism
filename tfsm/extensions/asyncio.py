@@ -74,7 +74,7 @@ from functools import partial, reduce
 from typing import Any, Optional
 
 from ..core import Callback, CallbackList, Condition, Event, EventData, Machine, MachineError, State, Transition, listify
-from .nesting import HierarchicalMachine, NestedEvent, NestedState, NestedTransition, resolve_order
+from .nesting import FunctionWrapper, HierarchicalMachine, NestedEvent, NestedState, NestedTransition, resolve_order
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -1215,8 +1215,44 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
     transition_cls = NestedAsyncTransition
     event_cls = NestedAsyncEvent  # type: ignore[assignment]
 
-    # TODO: This async override of sync parent method requires a generic-based async/sync separation architecture
-    async def trigger_event(self, model: Any, trigger: str, *args: Any, **kwargs: Any) -> bool:
+    def _add_trigger_to_model(self, trigger: str, model: Any) -> None:
+        """Add an async trigger wrapper to the model for hierarchical machines.
+
+        Overrides HierarchicalMachine._add_trigger_to_model to create async trigger functions.
+        The wrapper will call atrigger_event() instead of trigger_event().
+
+        Args:
+            trigger: Name of the trigger/event
+            model: Model to add the trigger to
+        """
+        async def _trigger_wrapper(*args: Any, **kwargs: Any) -> bool:
+            """Async wrapper that calls the machine's atrigger_event method."""
+            return await self.atrigger_event(model, trigger, *args, **kwargs)
+
+        self._add_may_transition_func_for_trigger(trigger, model)
+        # FunctionWrappers are only necessary if a custom separator is used
+        if trigger.startswith("to_") and self.state_cls.separator != "_":
+            path = trigger.removeprefix("to_").split(self.state_cls.separator)
+            if hasattr(model, "to_" + path[0]):
+                # add path to existing function wrapper
+                getattr(model, "to_" + path[0]).add(_trigger_wrapper, path[1:])
+            else:
+                # create a new function wrapper
+                self._checked_assignment(model, "to_" + path[0], FunctionWrapper(_trigger_wrapper))
+        else:
+            self._checked_assignment(model, trigger, _trigger_wrapper)
+
+    def trigger_event(self, model: Any, trigger: str, *args: Any, **kwargs: Any) -> bool:
+        """Synchronous version is disabled in HierarchicalAsyncMachine!
+
+        ⚠️  Use 'await atrigger_event(...)' instead.
+
+        Raises:
+            RuntimeError: Always raised when called
+        """
+        raise RuntimeError("HierarchicalAsyncMachine.trigger_event() is disabled. Use 'await machine.atrigger_event(...)' instead.")
+
+    async def atrigger_event(self, model: Any, trigger: str, *args: Any, **kwargs: Any) -> bool:
         """Processes events recursively and forwards arguments if suitable events are found.
         This function is usually bound to models with model and trigger arguments already
         resolved as a partial. Execution will halt when a nested transition has been executed
@@ -1236,13 +1272,26 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
         event_data = AsyncEventData(state=None, event=None, machine=self, model=model, args=args, kwargs=kwargs)  # type: ignore[arg-type]
         event_data.result = None  # type: ignore[assignment]
 
-        return await self.process_context(partial(self._trigger_event, event_data, trigger), model)
+        return await self.process_context(partial(self._atrigger_event, event_data, trigger), model)
 
-    # TODO: This async override of sync parent method requires a generic-based async/sync separation architecture
-    async def _trigger_event(self, event_data: AsyncEventData, trigger: str) -> bool:
+    def _trigger_event(self, event_data: "AsyncEventData", trigger: str) -> bool:  # type: ignore[override]
+        """Synchronous version is disabled in HierarchicalAsyncMachine!
+
+        ⚠️  Use 'await _atrigger_event(...)' instead.
+
+        Raises:
+            RuntimeError: Always raised when called
+        """
+        raise RuntimeError("HierarchicalAsyncMachine._trigger_event() is disabled. Use 'await machine._atrigger_event(...)' instead.")
+
+    async def _atrigger_event(self, event_data: "AsyncEventData", trigger: str) -> bool:
+        """Async version of _trigger_event.
+
+        ⚠️  CRITICAL: Must be awaited!
+        """
         try:
             with self():
-                res = await self._trigger_event_nested(event_data, trigger, None)
+                res = await self._atrigger_event_nested(event_data, trigger, None)
             event_data.result = self._check_event_result(res, event_data.model, trigger)
         except BaseException as err:  # pylint: disable=broad-except; Exception will be handled elsewhere
             event_data.error = err  # type: ignore[assignment]
@@ -1258,8 +1307,21 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                 _LOGGER.error("%sWhile executing finalize callbacks a %s occurred: %s.", self.name, type(err).__name__, str(err))
         return event_data.result
 
-    # TODO: This async override of sync parent method requires a generic-based async/sync separation architecture
-    async def _trigger_event_nested(self, event_data: AsyncEventData, _trigger: str, _state_tree: dict[str, Any] | None) -> bool | None:
+    def _trigger_event_nested(self, event_data: "AsyncEventData", _trigger: str, _state_tree: dict[str, Any] | None) -> bool:  # type: ignore[override]
+        """Synchronous version is disabled in HierarchicalAsyncMachine!
+
+        ⚠️  Use 'await _atrigger_event_nested(...)' instead.
+
+        Raises:
+            RuntimeError: Always raised when called
+        """
+        raise RuntimeError("HierarchicalAsyncMachine._trigger_event_nested() is disabled. Use 'await machine._atrigger_event_nested(...)' instead.")
+
+    async def _atrigger_event_nested(self, event_data: "AsyncEventData", _trigger: str, _state_tree: dict[str, Any] | None) -> bool | None:
+        """Async version of _trigger_event_nested.
+
+        ⚠️  CRITICAL: Must be awaited!
+        """
         model = event_data.model
         if _state_tree is None:
             _state_tree = self.build_state_tree(
@@ -1270,7 +1332,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
         for key, value in _state_tree.items():
             if value:
                 with self(key):
-                    tmp = await self._trigger_event_nested(event_data, _trigger, value)
+                    tmp = await self._atrigger_event_nested(event_data, _trigger, value)
                     if tmp is not None:
                         res[key] = tmp
             if not res.get(key, None) and _trigger in self.events:
@@ -1279,17 +1341,43 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                     res[key] = tmp
         return None if not res or all(v is None for v in res.values()) else any(res.values())
 
-    # TODO: This async override of sync parent method requires a generic-based async/sync separation architecture
-    async def _can_trigger(self, model: Any, trigger: str, *args: Any, **kwargs: Any) -> bool:
+    def _can_trigger(self, model: Any, trigger: str, *args: Any, **kwargs: Any) -> bool:
+        """Synchronous version is disabled in HierarchicalAsyncMachine!
+
+        ⚠️  Use 'await _acan_trigger(...)' instead.
+
+        Raises:
+            RuntimeError: Always raised when called
+        """
+        raise RuntimeError("HierarchicalAsyncMachine._can_trigger() is disabled. Use 'await machine._acan_trigger(...)' instead.")
+
+    async def _acan_trigger(self, model: Any, trigger: str, *args: Any, **kwargs: Any) -> bool:
+        """Async version of _can_trigger.
+
+        ⚠️  CRITICAL: Must be awaited!
+        """
         state_tree = self.build_state_tree(getattr(model, self.model_attribute), self.state_cls.separator)
         ordered_states = resolve_order(state_tree)
         for state_path in ordered_states:
             with self():
-                return await self._can_trigger_nested(model, trigger, state_path, *args, **kwargs)
+                return await self._acan_trigger_nested(model, trigger, state_path, *args, **kwargs)
         return False
 
-    # TODO: This async override of sync parent method requires a generic-based async/sync separation architecture
-    async def _can_trigger_nested(self, model: Any, trigger: str, path: list[str], *args: Any, **kwargs: Any) -> bool:
+    def _can_trigger_nested(self, model: Any, trigger: str, path: list[str], *args: Any, **kwargs: Any) -> bool:
+        """Synchronous version is disabled in HierarchicalAsyncMachine!
+
+        ⚠️  Use 'await _acan_trigger_nested(...)' instead.
+
+        Raises:
+            RuntimeError: Always raised when called
+        """
+        raise RuntimeError("HierarchicalAsyncMachine._can_trigger_nested() is disabled. Use 'await machine._acan_trigger_nested(...)' instead.")
+
+    async def _acan_trigger_nested(self, model: Any, trigger: str, path: list[str], *args: Any, **kwargs: Any) -> bool:
+        """Async version of _can_trigger_nested.
+
+        ⚠️  CRITICAL: Must be awaited!
+        """
         if trigger in self.events:
             source_path = copy.copy(path)
             while source_path:
@@ -1315,7 +1403,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                 source_path.pop(-1)
         if path:
             with self(path.pop(0)):
-                return await self._can_trigger_nested(model, trigger, path, *args, **kwargs)
+                return await self._acan_trigger_nested(model, trigger, path, *args, **kwargs)
         return False
 
 
@@ -1352,7 +1440,7 @@ class AsyncTimeout(AsyncState):
         self.runner: dict[int, asyncio.Task[Any]] = {}
         super().__init__(*args, **kwargs)
 
-    def enter(self, event_data: "AsyncEventData") -> None:
+    def enter(self, event_data: "AsyncEventData") -> None:  # type: ignore[override]
         """Synchronous version is disabled in AsyncTimeout!
 
         ⚠️  Use 'await aenter(...)' instead.
@@ -1377,7 +1465,7 @@ class AsyncTimeout(AsyncState):
             self.runner[id(event_data.model)] = self.acreate_timer(event_data)
         await super().aenter(event_data)
 
-    def exit(self, event_data: "AsyncEventData") -> None:
+    def exit(self, event_data: "AsyncEventData") -> None:  # type: ignore[override]
         """Synchronous version is disabled in AsyncTimeout!
 
         ⚠️  Use 'await aexit(...)' instead.
