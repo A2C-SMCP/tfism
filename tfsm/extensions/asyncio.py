@@ -1225,6 +1225,7 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
             trigger: Name of the trigger/event
             model: Model to add the trigger to
         """
+
         async def _trigger_wrapper(*args: Any, **kwargs: Any) -> bool:
             """Async wrapper that calls the machine's atrigger_event method."""
             return await self.atrigger_event(model, trigger, *args, **kwargs)
@@ -1315,7 +1316,9 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
         Raises:
             RuntimeError: Always raised when called
         """
-        raise RuntimeError("HierarchicalAsyncMachine._trigger_event_nested() is disabled. Use 'await machine._atrigger_event_nested(...)' instead.")
+        raise RuntimeError(
+            "HierarchicalAsyncMachine._trigger_event_nested() is disabled. Use 'await machine._atrigger_event_nested(...)' instead."
+        )
 
     async def _atrigger_event_nested(self, event_data: "AsyncEventData", _trigger: str, _state_tree: dict[str, Any] | None) -> bool | None:
         """Async version of _trigger_event_nested.
@@ -1371,7 +1374,9 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
         Raises:
             RuntimeError: Always raised when called
         """
-        raise RuntimeError("HierarchicalAsyncMachine._can_trigger_nested() is disabled. Use 'await machine._acan_trigger_nested(...)' instead.")
+        raise RuntimeError(
+            "HierarchicalAsyncMachine._can_trigger_nested() is disabled. Use 'await machine._acan_trigger_nested(...)' instead."
+        )
 
     async def _acan_trigger_nested(self, model: Any, trigger: str, path: list[str], *args: Any, **kwargs: Any) -> bool:
         """Async version of _can_trigger_nested.
