@@ -145,12 +145,13 @@ class State:
 
     def add_callback(self, trigger: str, func: str | Callback) -> None:
         """Add a new enter or exit callback.
+
         Args:
-            trigger (str): The type of triggering event. Must be one of
-                'enter' or 'exit'.
+            trigger (str): The full method name for the callback list (e.g., 'on_enter', 'on_exit',
+                or any custom method defined in dynamic_methods).
             func (str): The name of the callback function.
         """
-        callback_list = getattr(self, "on_" + trigger)
+        callback_list = getattr(self, trigger)
         callback_list.append(func)
 
     def __repr__(self) -> str:
@@ -961,7 +962,7 @@ class Machine:
         for callback in self.state_cls.dynamic_methods:
             method = f"{callback}_{state.name}"
             if hasattr(model, method) and inspect.ismethod(getattr(model, method)) and method not in getattr(state, callback):
-                state.add_callback(callback[3:], method)
+                state.add_callback(callback, method)
 
     def _checked_assignment(self, model: Any, name: str, func: Callable[..., Any]) -> None:
         bound_func = getattr(model, name, None)
@@ -1352,6 +1353,41 @@ class Machine:
             raise ValueError(msg)
         return found
 
+    # TODO: Refactor _process to support per-model queues for better multi-model isolation
+    #
+    # Current implementation uses a single global queue (self._transition_queue) shared by all models.
+    # This can be improved by adopting the per-model queue design from AsyncMachine:
+    #
+    # Implementation plan:
+    # 1. Change `queued` parameter type from `bool` to `bool | str` to support:
+    #    - queued=False (default): No queue, execute immediately
+    #    - queued=True: Single global queue (current behavior, backward compatible)
+    #    - queued="model": Per-model queue isolation (new feature)
+    #
+    # 2. Replace self._transition_queue with self._transition_queue_dict:
+    #    - Type: dict[int, deque[Callable[[], bool]]]
+    #    - Key: id(model) for per-model isolation
+    #    - For queued=True: Use a dict-like wrapper around single queue (backward compatible)
+    #    - For queued="model": Create separate deque for each model
+    #
+    # 3. Update _process signature to include model parameter:
+    #    - def _process(self, trigger: Callable[[], bool], model: Any) -> bool:
+    #    - Access queue via: self._transition_queue_dict[id(model)]
+    #
+    # 4. Update _transition_queue initialization in __init__:
+    #    - Initialize based on queued value (True vs "model")
+    #    - Update add_model/remove_model to manage per-model queues
+    #
+    # 5. Update all callers to pass model parameter:
+    #    - Event._trigger() -> machine._process(trigger, event_data.model)
+    #
+    # Benefits:
+    # - Better isolation between models in multi-model scenarios
+    # - Prevents one model's long queue from blocking other models
+    # - Consistent design with AsyncMachine (see tfsm/extensions/asyncio.py)
+    # - Maintains backward compatibility via queued=True mode
+    #
+    # Reference: AsyncMachine implementation in tfsm/extensions/asyncio.py:1169-1193
     def _process(self, trigger: Callable[[], bool]) -> bool:
 
         # default processing
@@ -1417,7 +1453,7 @@ class Machine:
                 # target is guaranteed to be not None here
                 assert target is not None
                 state = self.get_state(target)
-                return partial(state.add_callback, callback_type[3:])
+                return partial(state.add_callback, callback_type)
 
         try:
             return self.__getattribute__(name)

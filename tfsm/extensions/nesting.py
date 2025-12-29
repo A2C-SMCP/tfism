@@ -977,7 +977,7 @@ class HierarchicalMachine(Machine):
             state_name (str): Name of the state
             callback (str or callable): Function to be called. Strings will be resolved to model functions.
         """
-        self.get_state(state_name).add_callback("enter", callback)
+        self.get_state(state_name).add_callback("on_enter", callback)
 
     def on_exit(self, state_name: str, callback: str | Callback) -> None:
         """Helper function to add callbacks to states in case a custom state separator is used.
@@ -985,7 +985,7 @@ class HierarchicalMachine(Machine):
             state_name (str): Name of the state
             callback (str or callable): Function to be called. Strings will be resolved to model functions.
         """
-        self.get_state(state_name).add_callback("exit", callback)
+        self.get_state(state_name).add_callback("on_exit", callback)
 
     def set_state(  # type: ignore[override]
         self, state: Union[str, Enum, list[Any], "NestedState"], model: Any | None = None
@@ -1080,7 +1080,7 @@ class HierarchicalMachine(Machine):
             for callback in self.state_cls.dynamic_methods:
                 method = f"{callback}_{name}"
                 if hasattr(model, method) and inspect.ismethod(getattr(model, method)) and method not in getattr(state, callback):
-                    state.add_callback(callback[3:], method)
+                    state.add_callback(callback, method)
         else:
             path = name.split(self.state_cls.separator)  # type: ignore[union-attr]
             value = state.value if isinstance(state.value, Enum) else name

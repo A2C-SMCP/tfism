@@ -5,7 +5,7 @@ name: pytest
 
 on:
   push:
-    branches: [main, dev-gha]
+    branches: [main, develop]
   pull_request:
     branches: [main]
 
@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false  # 不要因为一个 job 失败就取消其他 job
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
         extras: ["[diagrams]"]
         include:
           - python-version: "3.13"
@@ -50,6 +50,7 @@ jobs:
           uv venv --python ${{ matrix.python-version }}
           echo "=== Installing Python packages ==="
           uv pip install -e ".${{ matrix.extras }}"
+          uv pip install poethepoet
       - name: Verify pygraphviz installation
         if: contains(matrix.extras, 'diagrams')
         run: |
@@ -67,15 +68,14 @@ jobs:
       - name: Run type checking
         if: contains(matrix.extras, 'mypy')
         run: |
-          uv run mypy --config-file mypy.ini --strict transitions
-          uv run pytest tests/test_codestyle.py
+          uv run poe lint
       - name: Test with pytest
         run: |
-          uv run pytest tests/ --ignore=tests/test_codestyle.py -q
+          uv run poe test
       - name: Test with pytest and coverage
         if: contains(matrix.extras, 'mypy')
         run: |
-          uv run pytest --cov=transitions --cov-report=lcov --cov-report=term-missing tests/ --ignore=tests/test_codestyle.py -q
+          uv run poe test-cov
       - name: Coveralls Parallel
         if: contains(matrix.extras, 'mypy')
         uses: coverallsapp/github-action@v2

@@ -7,7 +7,7 @@ name = "tfsm"
 version = "0.9.5"
 description = "A lightweight, object-oriented Python state machine implementation with many extensions."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
     { name = "Tal Yarkoni", email = "tyarkoni@gmail.com" },
@@ -19,6 +19,7 @@ keywords = ["state machine", "statemachine", "fsm", "finite state machine"]
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -119,7 +120,7 @@ dev = [
 ]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.10"
 # Less strict configuration for gradual type adoption
 check_untyped_defs = false
 disallow_untyped_defs = false
@@ -155,9 +156,9 @@ install-dev = "uv pip install -e '.[all]'"
 install-all = "uv pip install -e '.[all]'"
 
 # Test tasks
-test = "uv run pytest tests/"
-test-cov = "uv run pytest --cov=tfsm --cov-report=html --cov-report=term tests/"
-test-no-diagrams = "uv run pytest tests/ --ignore=tests/test_codestyle.py"
+test = "uv run pytest -n auto tests/"
+test-cov = "uv run pytest --cov=tfsm --cov-report=html --cov-report=term --cov-report=xml tests/"
+test-no-diagrams = "uv run pytest -n auto tests/ --ignore=tests/test_codestyle.py"
 
 # Type checking
 mypy = "uv run mypy --config-file mypy.ini --strict tfsm"
