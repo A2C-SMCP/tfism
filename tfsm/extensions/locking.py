@@ -212,7 +212,7 @@ class LockedMachine(Machine):
             callback = f"{prefix}_{self._get_qualified_state_name(state)}"
             func = getattr(model, callback, None)
             if isinstance(func, partial) and func.func != state.add_callback:
-                state.add_callback(prefix[3:], callback)
+                state.add_callback(prefix, callback)
 
     # this needs to be overridden by the HSM variant to resolve names correctly
     def _get_qualified_state_name(self, state: Any) -> Any:

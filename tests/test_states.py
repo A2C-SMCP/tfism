@@ -173,7 +173,7 @@ class TestTransitions(TestCase):
         sleep(0.1)
         self.assertTrue(timeout.called)
         self.assertTrue(counter.called)
-        machine.get_state("B").add_callback("timeout", "notification")
+        machine.get_state("B").add_callback("on_timeout", "notification")
         machine.on_timeout_B("another_notification")
         model.to_B()
         sleep(0.1)
@@ -267,3 +267,109 @@ class TestStatesDiagramsLockedNested(TestDiagramsLockedNested):
     def test_nested_notebook(self):
         # test will create a custom state machine already. This will cause errors when inherited.
         self.assertTrue(True)
+
+
+class TestCustomDynamicMethods(TestCase):
+    """Test cases for custom dynamic_methods that don't start with 'on_'."""
+
+    def test_custom_dynamic_method_without_on_prefix(self):
+        """Test that custom dynamic_methods without 'on_' prefix work correctly.
+
+        After the fix, add_callback should accept the full method name from dynamic_methods,
+        not requiring callers to strip a prefix with [3:].
+        """
+
+        from tfsm.core import State
+
+        # Custom State with a dynamic_method that doesn't start with 'on_'
+        class CustomState(State):
+            """A custom state with a 'before_enter' callback list."""
+
+            dynamic_methods = ["before_enter"]
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.before_enter = []
+
+        # Test that we can create a state with the custom method
+        state = CustomState("test_state")
+
+        def callback_func():
+            pass
+
+        # After the fix, we should be able to pass the full method name
+        state.add_callback("before_enter", callback_func)
+        self.assertEqual(len(state.before_enter), 1)
+
+        # Verify that the old [3:] pattern is no longer needed and would be wrong
+        # For 'before_enter', [3:] would give 'ore_enter' which doesn't exist
+        method_name = "before_enter"
+        # This would be the old (incorrect) way:
+        # trigger = method_name[3:]  # 'ore_enter' - WRONG!
+        # The new (correct) way is to use the full method name:
+        state.add_callback(method_name, callback_func)
+        self.assertEqual(len(state.before_enter), 2)
+
+    def test_standard_on_prefix_methods_still_work(self):
+        """Test that standard dynamic_methods with 'on_' prefix still work correctly."""
+
+        from tfsm.core import State
+
+        # Standard State with 'on_' prefix methods
+        state = State("test")
+
+        def callback_func():
+            pass
+
+        # After the fix, we pass the full method name including 'on_' prefix
+        state.add_callback("on_enter", callback_func)
+        self.assertEqual(len(state.on_enter), 1)
+
+        state.add_callback("on_exit", callback_func)
+        self.assertEqual(len(state.on_exit), 1)
+
+    def test_machine_integration_with_custom_dynamic_methods(self):
+        """Test that custom dynamic_methods work correctly with Machine integration."""
+
+        from tfsm.core import State, Machine
+
+        # Custom State with a custom callback method
+        class CustomState(State):
+            dynamic_methods = ["before_enter", "after_exit"]
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.before_enter = []
+                self.after_exit = []
+
+        # Custom Machine that uses the CustomState
+        class CustomMachine(Machine):
+            state_cls = CustomState
+
+        # Track callback execution
+        callback_called = []
+
+        def on_before_enter_A():
+            callback_called.append("before_enter_A")
+
+        def on_after_exit_A():
+            callback_called.append("after_exit_A")
+
+        # Create model and machine
+        class Model:
+            pass
+
+        model = Model()
+        model.on_before_enter_A = on_before_enter_A
+        model.on_after_exit_A = on_after_exit_A
+
+        machine = CustomMachine(model=model, states=["A", "B"], initial="A")
+
+        # Manually add callbacks using the new interface
+        state_a = machine.get_state("A")
+        state_a.add_callback("before_enter", "on_before_enter_A")
+        state_a.add_callback("after_exit", "on_after_exit_A")
+
+        # The callbacks should be in the lists
+        self.assertEqual(len(state_a.before_enter), 1)
+        self.assertEqual(len(state_a.after_exit), 1)

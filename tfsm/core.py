@@ -145,12 +145,13 @@ class State:
 
     def add_callback(self, trigger: str, func: str | Callback) -> None:
         """Add a new enter or exit callback.
+
         Args:
-            trigger (str): The type of triggering event. Must be one of
-                'enter' or 'exit'.
+            trigger (str): The full method name for the callback list (e.g., 'on_enter', 'on_exit',
+                or any custom method defined in dynamic_methods).
             func (str): The name of the callback function.
         """
-        callback_list = getattr(self, "on_" + trigger)
+        callback_list = getattr(self, trigger)
         callback_list.append(func)
 
     def __repr__(self) -> str:
@@ -961,7 +962,7 @@ class Machine:
         for callback in self.state_cls.dynamic_methods:
             method = f"{callback}_{state.name}"
             if hasattr(model, method) and inspect.ismethod(getattr(model, method)) and method not in getattr(state, callback):
-                state.add_callback(callback[3:], method)
+                state.add_callback(callback, method)
 
     def _checked_assignment(self, model: Any, name: str, func: Callable[..., Any]) -> None:
         bound_func = getattr(model, name, None)
@@ -1452,7 +1453,7 @@ class Machine:
                 # target is guaranteed to be not None here
                 assert target is not None
                 state = self.get_state(target)
-                return partial(state.add_callback, callback_type[3:])
+                return partial(state.add_callback, callback_type)
 
         try:
             return self.__getattribute__(name)
