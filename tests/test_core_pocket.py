@@ -2,7 +2,7 @@
 
 import unittest
 
-from tfsm.core import Machine
+from tfism.core import Machine
 
 
 class TestStatePocket(unittest.TestCase):

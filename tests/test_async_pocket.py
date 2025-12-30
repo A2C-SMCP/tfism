@@ -2,7 +2,7 @@
 import asyncio
 import unittest
 
-from tfsm.extensions.asyncio import AsyncMachine
+from tfism.extensions.asyncio import AsyncMachine
 
 
 class TestAsyncMachinePocket(unittest.TestCase):

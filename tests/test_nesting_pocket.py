@@ -2,7 +2,7 @@
 """Test HierarchicalMachine.pocket functionality"""
 import unittest
 
-from tfsm.extensions.nesting import HierarchicalMachine, NestedState
+from tfism.extensions.nesting import HierarchicalMachine, NestedState
 
 
 class TestHierarchicalMachinePocket(unittest.TestCase):
