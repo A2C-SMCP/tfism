@@ -83,7 +83,13 @@ _LOGGER.addHandler(logging.NullHandler())
 CANCELLED_MSG = "_transition"
 """A message passed to a cancelled task to indicate that the cancellation was caused by tfsm."""
 
-
+# TODO 现在的设计有问题，dynamic_methods 看起来每个子类可以随便定义，但是事实上必须有同名属性，接收callbacks列表。
+#  这违反了以下重要设计原则：
+#  1. 显式优于隐式 - 依赖关系应该是显式声明的，而不是隐式约定的
+#  2. 最小惊讶原则 - 用户不应被代码行为"惊讶"，方法和属性的隐式依赖关系令人困惑
+#  3. 魔法代码反模式 - 代码行为依赖于隐式命名约定而非显式声明
+#  4. 隐式耦合 - 方法和属性之间存在不明显的隐式依赖关系
+#  需要V1.0重构时解决此设计问题
 class AsyncState(State):
     """Async state with async-only transition methods.
 
