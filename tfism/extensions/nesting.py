@@ -489,16 +489,16 @@ class HierarchicalMachine(Machine):
             auto_transitions=auto_transitions,
             ordered_transitions=ordered_transitions,
             ignore_invalid_triggers=ignore_invalid_triggers,
-            before_state_change=before_state_change,  # type: ignore[arg-type]
-            after_state_change=after_state_change,  # type: ignore[arg-type]
+            before_state_change=before_state_change,
+            after_state_change=after_state_change,
             name=name,
             queued=queued,
-            prepare_event=prepare_event,  # type: ignore[arg-type]
-            finalize_event=finalize_event,  # type: ignore[arg-type]
+            prepare_event=prepare_event,
+            finalize_event=finalize_event,
             model_attribute=model_attribute,
             model_override=model_override,
-            on_exception=on_exception,  # type: ignore[arg-type]
-            on_final=on_final,  # type: ignore[arg-type]
+            on_exception=on_exception,
+            on_final=on_final,
             **kwargs,
         )
 
