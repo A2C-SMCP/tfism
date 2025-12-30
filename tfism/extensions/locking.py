@@ -15,7 +15,7 @@ from functools import partial
 from threading import Lock, get_ident
 from typing import Any
 
-from tfism.core import Event, Machine, listify
+from tfism.core import Callback, CallbackList, Event, Machine, listify
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER.addHandler(logging.NullHandler())
@@ -104,16 +104,16 @@ class LockedMachine(Machine):
         auto_transitions: bool = True,
         ordered_transitions: bool = False,
         ignore_invalid_triggers: Any = None,
-        before_state_change: Any = None,
-        after_state_change: Any = None,
-        name: Any = None,
+        before_state_change: str | Callback | CallbackList | None = None,
+        after_state_change: str | Callback | CallbackList | None = None,
+        name: str | None = None,
         queued: bool = False,
-        prepare_event: Any = None,
-        finalize_event: Any = None,
+        prepare_event: str | Callback | CallbackList | None = None,
+        finalize_event: str | Callback | CallbackList | None = None,
         model_attribute: str = "state",
         model_override: bool = False,
-        on_exception: Any = None,
-        on_final: Any = None,
+        on_exception: str | Callback | CallbackList | None = None,
+        on_final: str | Callback | CallbackList | None = None,
         machine_context: Any = None,
         **kwargs: Any,
     ) -> None:

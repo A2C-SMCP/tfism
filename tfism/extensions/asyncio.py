@@ -83,6 +83,7 @@ _LOGGER.addHandler(logging.NullHandler())
 CANCELLED_MSG = "_transition"
 """A message passed to a cancelled task to indicate that the cancellation was caused by tfsm."""
 
+
 # TODO 现在的设计有问题，dynamic_methods 看起来每个子类可以随便定义，但是事实上必须有同名属性，接收callbacks列表。
 #  这违反了以下重要设计原则：
 #  1. 显式优于隐式 - 依赖关系应该是显式声明的，而不是隐式约定的
@@ -838,16 +839,16 @@ class AsyncMachine(Machine):
         auto_transitions: bool = True,
         ordered_transitions: bool = False,
         ignore_invalid_triggers: bool | None = None,
-        before_state_change: Callback | None = None,
-        after_state_change: Callback | None = None,
+        before_state_change: str | Callback | CallbackList | None = None,
+        after_state_change: str | Callback | CallbackList | None = None,
         name: str | None = None,
         queued: bool | str = False,
-        prepare_event: Callback | None = None,
-        finalize_event: Callback | None = None,
+        prepare_event: str | Callback | CallbackList | None = None,
+        finalize_event: str | Callback | CallbackList | None = None,
         model_attribute: str = "state",
         model_override: bool = False,
-        on_exception: Callback | None = None,
-        on_final: Callback | None = None,
+        on_exception: str | Callback | CallbackList | None = None,
+        on_final: str | Callback | CallbackList | None = None,
         **kwargs: Any,
     ) -> None:
 
