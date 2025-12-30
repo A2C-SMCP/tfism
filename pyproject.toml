@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tfism"
-version = "0.9.5-final1"
+version = "0.9.5"
 description = "A lightweight, object-oriented Python state machine implementation with many extensions."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -225,19 +225,25 @@ exclude_lines = [
 ]
 
 [tool.bumpversion]
-current_version = "0.9.5-final1"
+current_version = "0.9.5"
 parse = """(?x)
+    ^
     (?P<major>0|[1-9]\\d*)\\.
     (?P<minor>0|[1-9]\\d*)\\.
     (?P<patch>0|[1-9]\\d*)
     (?:
-        -
-        (?P<pre_l>[a-zA-Z-]+)
+        (?P<pre_l>a|b|rc)
         (?P<pre_n>0|[1-9]\\d*)
     )?
+    (?:
+        (?P<dev>.dev)
+        (?P<dev_n>0|[1-9]\\d*)
+    )?
+    $
 """
 serialize = [
-    "{major}.{minor}.{patch}-{pre_l}{pre_n}",
+    "{major}.{minor}.{patch}{pre_l}{pre_n}",
+    "{major}.{minor}.{patch}{dev}{dev_n}",
     "{major}.{minor}.{patch}",
 ]
 tag = true
@@ -246,8 +252,8 @@ commit = true
 message = "Bump version: {current_version} → {new_version}"
 
 [tool.bumpversion.parts.pre_l]
-values = ["dev", "rc", "final"]
-optional_value = "final"
+values = ["a", "b", "rc"]
+optional_value = "rc"
 
 [[tool.bumpversion.files]]
 filename = "tfism/version.py"

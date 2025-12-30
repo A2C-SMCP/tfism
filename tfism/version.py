@@ -2,4 +2,4 @@
 to determine tfsm' version during runtime.
 """
 
-__version__: str = "0.9.5-final1"
+__version__: str = "0.9.5"
