@@ -25,9 +25,9 @@ serialize = [
     "{major}.{minor}.{patch}{post}{post_n}",
     "{major}.{minor}.{patch}",
 ]
-tag = true
+tag = false
 tag_name = "v{new_version}"
-commit = true
+commit = false
 message = "Bump version: {current_version} → {new_version}"
 
 [tool.bumpversion.parts.pre_l]
@@ -45,7 +45,6 @@ first_value = 1
 values = [".post"]
 
 [tool.bumpversion.parts.post_n]
-first_value = 1
 
 [[tool.bumpversion.files]]
 filename = "tfism/version.py"
