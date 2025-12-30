@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tfism"
-version = "0.9.5rc1"
+version = "0.9.5"
 description = "A lightweight, object-oriented Python state machine implementation with many extensions."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -187,14 +187,23 @@ version-bump-minor = "uv run bump-my-version bump minor"
 version-bump-patch = "uv run bump-my-version bump patch"
 
 # Pre-release version management
-version-bump-dev = "uv run bump-my-version bump dev --no-commit --no-tag"
-version-bump-rc = "uv run bump-my-version bump rc --no-commit --no-tag"
-version-bump-rc-final = "uv run bump-my-version bump final"  # Remove pre-release tag
+# For starting pre-release development: 0.9.5 → 0.9.6a1
+version-bump-alpha = "uv run bump-my-version bump minor --no-commit --no-tag && uv run bump-my-version bump pre_l --no-commit --no-tag"
+# For continuing pre-release: 0.9.6a1 → 0.9.6a2 or 0.9.6a1 → 0.9.6b1 → 0.9.6rc1
+version-bump-pre = "uv run bump-my-version bump pre_n"
+version-bump-beta = "uv run bump-my-version bump pre_l --no-commit --no-tag && uv run bump-my-version bump pre_n --no-commit --no-tag && uv run bump-my-version bump pre_l --no-commit --no-tag"
+version-bump-rc = "uv run bump-my-version bump pre_l --no-commit --no-tag && uv run bump-my-version bump pre_n --no-commit --no-tag && uv run bump-my-version bump pre_l --no-commit --no-tag"
 
-# Release workflow (bump + commit + tag in one step)
-version-release-patch = "uv run bump-my-version bump patch"
-version-release-minor = "uv run bump-my-version bump minor"
-version-release-major = "uv run bump-my-version bump major"
+# Post-release version management (hotfixes after release)
+# For post-release: 0.9.5 → 0.9.5.post1 → 0.9.5.post2
+version-bump-post = "uv run bump-my-version bump post_n"
+
+# Dev version management
+version-bump-dev = "uv run bump-my-version bump dev --no-commit --no-tag"
+
+# Release workflow (creates official release)
+# These remove any pre-release tags and create the final version
+version-release = "uv run bump-my-version bump final"
 
 # Helpers
 version-dry-run = "uv run bump-my-version bump patch --dry-run -v"
@@ -225,7 +234,7 @@ exclude_lines = [
 ]
 
 [tool.bumpversion]
-current_version = "0.9.5rc1"
+current_version = "0.9.5"
 parse = """(?x)
     ^
     (?P<major>0|[1-9]\\d*)\\.
@@ -239,11 +248,16 @@ parse = """(?x)
         (?P<dev>.dev)
         (?P<dev_n>0|[1-9]\\d*)
     )?
+    (?:
+        (?P<post>.post)
+        (?P<post_n>0|[1-9]\\d*)
+    )?
     $
 """
 serialize = [
     "{major}.{minor}.{patch}{pre_l}{pre_n}",
     "{major}.{minor}.{patch}{dev}{dev_n}",
+    "{major}.{minor}.{patch}{post}{post_n}",
     "{major}.{minor}.{patch}",
 ]
 tag = true
@@ -253,7 +267,21 @@ message = "Bump version: {current_version} → {new_version}"
 
 [tool.bumpversion.parts.pre_l]
 values = ["a", "b", "rc"]
-optional_value = "rc"
+optional_value = "a"
+
+[tool.bumpversion.parts.dev]
+first_value = 1
+independent = true
+
+[tool.bumpversion.parts.dev_n]
+first_value = 1
+
+[tool.bumpversion.parts.post]
+first_value = 1
+independent = true
+
+[tool.bumpversion.parts.post_n]
+first_value = 1
 
 [[tool.bumpversion.files]]
 filename = "tfism/version.py"
