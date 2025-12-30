@@ -223,3 +223,48 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
+
+[tool.bumpversion]
+current_version = "0.9.5"
+parse = """(?x)
+    (?P<major>0|[1-9]\\d*)\\.
+    (?P<minor>0|[1-9]\\d*)\\.
+    (?P<patch>0|[1-9]\\d*)
+    (?:
+        -
+        (?P<pre_l>[a-zA-Z-]+)
+        (?P<pre_n>0|[1-9]\\d*)
+    )?
+"""
+serialize = [
+    "{major}.{minor}.{patch}-{pre_l}{pre_n}",
+    "{major}.{minor}.{patch}",
+]
+tag = true
+tag_name = "v{new_version}"
+commit = true
+message = "Bump version: {current_version} → {new_version}"
+
+[tool.bumpversion.parts.pre_l]
+values = ["dev", "rc", "final"]
+optional_value = "final"
+
+[[tool.bumpversion.files]]
+filename = "tfism/version.py"
+search = '__version__: str = "{current_version}"'
+replace = '__version__: str = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "README.md"
+search = "version-v{current_version}"
+replace = "version-v{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "README.md"
+search = "compare/{current_version}...main"
+replace = "compare/{new_version}...main"
